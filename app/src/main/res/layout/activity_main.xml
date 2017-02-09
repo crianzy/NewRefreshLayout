@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+             xmlns:app="http://schemas.android.com/apk/res-auto"
+             android:layout_width="match_parent"
+             android:layout_height="match_parent"
+             android:background="@color/action_bar_black_color"
+>
+
+    <czy.com.newrefreshlayout.indicator.RecyclerTabIndicator
+        android:id="@+id/recycler_tab_indicator"
+        android:layout_width="wrap_content"
+        android:layout_height="@dimen/discover_top_bar_height"
+        android:fadingEdge="horizontal"
+        android:overScrollMode="always"
+        app:rtl_tabIndicatorColor="@color/white"
+        app:rtl_tabIndicatorHeight="1dp"
+        app:rtl_tabIndicatorWidth="30dp"
+    />
+
+
+    <android.support.v4.view.ViewPager
+        android:id="@+id/view_pager"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_marginTop="@dimen/discover_top_bar_height"/>
+
+</FrameLayout>
