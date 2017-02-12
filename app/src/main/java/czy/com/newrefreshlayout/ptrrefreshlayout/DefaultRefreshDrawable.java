@@ -267,7 +267,7 @@ public class DefaultRefreshDrawable extends RefreshDrawable {
             if (progress > 1) {
                 progress = 1;
             }
-            updatePathsPhaseLocked();
+//            updatePathsPhaseLocked();
 
 
             float icon_1_left = mCenterX - r - mDegrees;
@@ -275,22 +275,22 @@ public class DefaultRefreshDrawable extends RefreshDrawable {
             float icon_1_right = icon_1_left + 2 * r;
             float icon_1_bottom = icon_1_top + 2 * r;
             RectF icon_1_rect = new RectF((int) icon_1_left, (int) icon_1_top, (int) icon_1_right, (int) icon_1_bottom);
-//            canvas.drawBitmap(mIcon1, null, icon_1_rect, mIconPaint);
+            canvas.drawBitmap(mIcon1, null, icon_1_rect, mIconPaint);
 
 
-            mTempBitmap.eraseColor(0);
-            synchronized (mSvgLock) {
-                final int count = paths.size();
-                Log.e(TAG, "onDraw: count = " + count);
-                for (int i = 0; i < count; i++) {
-                    final SvgUtils.SvgPath svgPath = paths.get(i);
-                    final Path path = svgPath.path;
-                    final Paint paint1 = paint;
-                    mTempCanvas.drawPath(path, paint1);
-                    Log.e(TAG, "onDraw: drawPath");
-                }
-                canvas.drawBitmap(mTempBitmap, null, icon_1_rect, mIconPaint);
-            }
+//            mTempBitmap.eraseColor(0);
+//            synchronized (mSvgLock) {
+//                final int count = paths.size();
+//                Log.e(TAG, "onDraw: count = " + count);
+//                for (int i = 0; i < count; i++) {
+//                    final SvgUtils.SvgPath svgPath = paths.get(i);
+//                    final Path path = svgPath.path;
+//                    final Paint paint1 = paint;
+//                    mTempCanvas.drawPath(path, paint1);
+//                    Log.e(TAG, "onDraw: drawPath");
+//                }
+//                canvas.drawBitmap(mTempBitmap, null, icon_1_rect, mIconPaint);
+//            }
 
 
             float icon_2_left = icon_1_right;
