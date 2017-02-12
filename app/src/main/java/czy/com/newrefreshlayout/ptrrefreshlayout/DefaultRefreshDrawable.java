@@ -15,6 +15,9 @@ import android.os.Handler;
 import android.util.Log;
 import android.util.TypedValue;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import czy.com.newrefreshlayout.R;
 
 /**
@@ -26,8 +29,8 @@ public class DefaultRefreshDrawable extends RefreshDrawable {
     float flag = 0.2f;
 
     RectF mBounds;
-    float mWidth;
-    float mHeight;
+    int mWidth;
+    int mHeight;
     float mCenterX;
     float mCenterY;
     float mPercent;
@@ -57,8 +60,26 @@ public class DefaultRefreshDrawable extends RefreshDrawable {
     Bitmap mIcon3;
     Bitmap mIcon4;
 
-
     Rect mDrawablebounds;
+
+    private Handler mHandler = new Handler();
+
+    private Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final SvgUtils svgUtils = new SvgUtils(paint);
+    private List<SvgUtils.SvgPath> paths = new ArrayList<>();
+    private final Object mSvgLock = new Object();
+    private Thread mLoader;
+    private int svgResourceId;
+    private float progress = 0.0f;
+    private boolean fill = false;
+    private int width;
+    private int height;
+    private Bitmap mTempBitmap;
+    private Canvas mTempCanvas;
+    private boolean fillAfter = false;
+    private int fillColor = Color.YELLOW;
+    private float precent100Offset;
+
 
     public DefaultRefreshDrawable(Context context, PTRefreshLayout layout) {
         super(context, layout);
@@ -98,6 +119,12 @@ public class DefaultRefreshDrawable extends RefreshDrawable {
         mIcon3 = BitmapFactory.decodeResource(context.getResources(), R.drawable.icon_3);
         mIcon4 = BitmapFactory.decodeResource(context.getResources(), R.drawable.icon_4);
 
+        paint.setStyle(Paint.Style.STROKE);
+        paint.setColor(Color.WHITE);
+        svgResourceId = R.raw.monitor;
+
+        precent100Offset = dp2px((int) ((1 - flag) * PTRefreshLayout.DRAG_MAX_DISTANCE));
+
     }
 
     @Override
@@ -113,6 +140,55 @@ public class DefaultRefreshDrawable extends RefreshDrawable {
 
         Log.e(TAG, "onBoundsChange: mHeight = " + mHeight + " , mCenterX = " + mCenterX + " , mCenterY = " + mCenterY + " , bounds = " + bounds);
 
+        if (mLoader != null) {
+            try {
+                mLoader.join();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+                Log.e(TAG, "Unexpected error", e);
+            }
+        }
+
+        if (mTempBitmap == null || (mTempBitmap.getWidth() != mWidth || mTempBitmap.getHeight() != mHeight)) {
+            mTempBitmap = Bitmap.createBitmap(mWidth, mHeight, Bitmap.Config.ARGB_8888);
+            mTempCanvas = new Canvas(mTempBitmap);
+        }
+
+        if (svgResourceId != 0) {
+            mLoader = new Thread(new Runnable() {
+                @Override
+                public void run() {
+
+                    svgUtils.load(getContext(), svgResourceId);
+
+                    synchronized (mSvgLock) {
+                        width = (int) mWidth;
+                        height = (int) mWidth;
+                        paths = svgUtils.getPathsForViewport(width, height);
+                        Log.e(TAG, "run: paths = " + paths);
+                        updatePathsPhaseLocked();
+                    }
+                }
+            }, "SVG Loader");
+            mLoader.start();
+        }
+    }
+
+    private void updatePathsPhaseLocked() {
+        final int count = paths.size();
+        for (int i = 0; i < count; i++) {
+            SvgUtils.SvgPath svgPath = paths.get(i);
+            svgPath.path.reset();
+            svgPath.measure.getSegment(0.0f, svgPath.length * progress, svgPath.path, true);
+            // Required only for Android 4.4 and earlier
+            svgPath.path.rLineTo(0.0f, 0.0f);
+        }
+        mHandler.post(new Runnable() {
+            @Override
+            public void run() {
+                invalidateSelf();
+            }
+        });
     }
 
     @Override
@@ -178,7 +254,6 @@ public class DefaultRefreshDrawable extends RefreshDrawable {
 
             mIconPaint.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.SRC_ATOP));
 
-
             if (isRunning()) {
                 mDegrees = mDegrees > r * 2 * 4 ? 0 : mDegrees + 2;
                 Log.e(TAG, "draw: mDegrees = " + mDegrees);
@@ -187,12 +262,36 @@ public class DefaultRefreshDrawable extends RefreshDrawable {
                 mDegrees = 0;
             }
 
+            progress = mOffset / precent100Offset;
+            Log.e(TAG, "draw: progress - " + progress + " precent100Offset = " + precent100Offset + " mOffset = " + mOffset);
+            if (progress > 1) {
+                progress = 1;
+            }
+            updatePathsPhaseLocked();
+
+
             float icon_1_left = mCenterX - r - mDegrees;
             float icon_1_top = mCenterY - r;
             float icon_1_right = icon_1_left + 2 * r;
             float icon_1_bottom = icon_1_top + 2 * r;
             RectF icon_1_rect = new RectF((int) icon_1_left, (int) icon_1_top, (int) icon_1_right, (int) icon_1_bottom);
-            canvas.drawBitmap(mIcon1, null, icon_1_rect, mIconPaint);
+//            canvas.drawBitmap(mIcon1, null, icon_1_rect, mIconPaint);
+
+
+            mTempBitmap.eraseColor(0);
+            synchronized (mSvgLock) {
+                final int count = paths.size();
+                Log.e(TAG, "onDraw: count = " + count);
+                for (int i = 0; i < count; i++) {
+                    final SvgUtils.SvgPath svgPath = paths.get(i);
+                    final Path path = svgPath.path;
+                    final Paint paint1 = paint;
+                    mTempCanvas.drawPath(path, paint1);
+                    Log.e(TAG, "onDraw: drawPath");
+                }
+                canvas.drawBitmap(mTempBitmap, null, icon_1_rect, mIconPaint);
+            }
+
 
             float icon_2_left = icon_1_right;
             float icon_2_top = icon_1_top;
