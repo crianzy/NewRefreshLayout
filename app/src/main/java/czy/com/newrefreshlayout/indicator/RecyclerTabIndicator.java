@@ -45,6 +45,7 @@ public class RecyclerTabIndicator extends RecyclerView {
     protected int mIndicatorPosition;
     protected int mIndicatorOffset;
     protected int mIndicatorWidth;
+    protected int mInitIndicatorWidth;
     protected int mScrollOffset;
     protected float mOldPositionOffset;
     protected float mPositionThreshold;
@@ -74,8 +75,9 @@ public class RecyclerTabIndicator extends RecyclerView {
                 .rtl_RecyclerTabLayout_rtl_tabIndicatorColor, 0));
         setIndicatorHeight(a.getDimensionPixelSize(R.styleable
                 .rtl_RecyclerTabLayout_rtl_tabIndicatorHeight, 0));
-        setIndicatorWidth(a.getDimensionPixelSize(R.styleable
-                .rtl_RecyclerTabLayout_rtl_tabIndicatorWidth, 0));
+
+        mInitIndicatorWidth = a.getDimensionPixelSize(R.styleable.rtl_RecyclerTabLayout_rtl_tabIndicatorWidth, 0);
+        setIndicatorWidth(mInitIndicatorWidth);
 
         mTabTextAppearance = a.getResourceId(R.styleable.rtl_RecyclerTabLayout_rtl_tabTextAppearance,
                 0);
@@ -108,6 +110,15 @@ public class RecyclerTabIndicator extends RecyclerView {
         mPositionThreshold = DEFAULT_POSITION_THRESHOLD;
     }
 
+
+    public void setInitIndicatorWidth(int initIndicatorWidth) {
+        mInitIndicatorWidth = initIndicatorWidth;
+    }
+
+    public int getInitIndicatorWidth() {
+        return mInitIndicatorWidth;
+    }
+
     @Override
     protected void onDetachedFromWindow() {
         if (mRecyclerOnScrollListener != null) {
@@ -128,6 +139,7 @@ public class RecyclerTabIndicator extends RecyclerView {
 
     public void setIndicatorWidth(int indicatorWidth) {
         mIndicatorWidth = indicatorWidth;
+        invalidate();
     }
 
     public void setAutoSelectionMode(boolean autoSelect) {
@@ -311,10 +323,12 @@ public class RecyclerTabIndicator extends RecyclerView {
         int bottom = getHeight();
 
         int width = right - left;
-        left = left + (width - mIndicatorWidth) / 2;
-        right = right - (width - mIndicatorWidth) / 2;
+        if (mIndicatorWidth > 0) {
+            left = left + (width - mIndicatorWidth) / 2;
+            right = right - (width - mIndicatorWidth) / 2;
 
-        canvas.drawRect(left, top, right, bottom, mIndicatorPaint);
+            canvas.drawRect(left, top, right, bottom, mIndicatorPaint);
+        }
     }
 
 

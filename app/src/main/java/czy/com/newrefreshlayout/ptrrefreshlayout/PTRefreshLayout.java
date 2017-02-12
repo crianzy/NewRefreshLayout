@@ -6,6 +6,7 @@ import android.graphics.Color;
 import android.support.v4.view.MotionEventCompat;
 import android.support.v4.view.ViewCompat;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.util.TypedValue;
 import android.view.MotionEvent;
 import android.view.View;
@@ -25,6 +26,7 @@ import czy.com.newrefreshlayout.R;
  * https://github.com/baoyongzhang/android-PullRefreshLayout
  */
 public class PTRefreshLayout extends ViewGroup {
+    private static final String TAG = "PTRefreshLayout";
 
     private static final float DECELERATE_INTERPOLATION_FACTOR = 2f;
     private static final int DRAG_MAX_DISTANCE = 64;
@@ -219,6 +221,7 @@ public class PTRefreshLayout extends ViewGroup {
                 final float yDiff = y - mInitialMotionY;
                 int targetY;
                 if (mRefreshing) {
+                    // 刷新中
                     targetY = (int) (mInitialOffsetTop + yDiff);
                     if (canChildScrollUp()) {
                         targetY = -1;
@@ -255,6 +258,7 @@ public class PTRefreshLayout extends ViewGroup {
                         }
                     }
                 } else {
+                    // 下拉过程
                     final float scrollTop = yDiff * DRAG_RATE;
                     float originalDragPercent = scrollTop / mTotalDragDistance;
                     if (originalDragPercent < 0) {
@@ -263,19 +267,25 @@ public class PTRefreshLayout extends ViewGroup {
                     mDragPercent = Math.min(1f, Math.abs(originalDragPercent));
                     float extraOS = Math.abs(scrollTop) - mTotalDragDistance;
                     float slingshotDist = mSpinnerFinalOffset;
-                    float tensionSlingshotPercent = Math.max(0,
-                            Math.min(extraOS, slingshotDist * 2) / slingshotDist);
-                    float tensionPercent = (float) ((tensionSlingshotPercent / 4) - Math.pow(
-                            (tensionSlingshotPercent / 4), 2)) * 2f;
+                    float tensionSlingshotPercent = Math.max(0, Math.min(extraOS, slingshotDist * 2) / slingshotDist);
+                    float tensionPercent = (float) ((tensionSlingshotPercent / 4) - Math.pow((tensionSlingshotPercent / 4), 2)) * 2f;
                     float extraMove = (slingshotDist) * tensionPercent * 2;
+
                     targetY = (int) ((slingshotDist * mDragPercent) + extraMove);
                     if (mRefreshView.getVisibility() != View.VISIBLE) {
                         mRefreshView.setVisibility(View.VISIBLE);
                     }
+
                     if (scrollTop < mTotalDragDistance) {
                         mRefreshDrawable.setPercent(mDragPercent);
+                        if (mPullListener != null) {
+                            mPullListener.onPullChange(mDragPercent);
+                        }
                     }
                 }
+
+                Log.e(TAG, "onTouchEvent: targetY = " + targetY + " yDiff = " + yDiff + " , targetY/yDiff" + (targetY / yDiff) + " mRefreshView.getBottom() = " + mRefreshView.getBottom());
+
                 setTargetOffsetTop(targetY - mCurrentOffsetTop, true);
                 break;
             }
@@ -363,6 +373,9 @@ public class PTRefreshLayout extends ViewGroup {
         int offset = targetTop - mTarget.getTop();
         setTargetOffsetTop(offset, false);
         mRefreshDrawable.setPercent(mDragPercent * (1 - interpolatedTime));
+        if (mPullListener != null) {
+            mPullListener.onPullChange(mDragPercent * (1 - interpolatedTime));
+        }
     }
 
     public void setRefreshing(boolean refreshing) {
@@ -378,6 +391,9 @@ public class PTRefreshLayout extends ViewGroup {
             mRefreshing = refreshing;
             if (mRefreshing) {
                 mRefreshDrawable.setPercent(1f);
+                if (mPullListener != null) {
+                    mPullListener.onPullChange(1);
+                }
                 animateOffsetToCorrectPosition();
             } else {
                 animateOffsetToStartPosition();
@@ -450,6 +466,7 @@ public class PTRefreshLayout extends ViewGroup {
 
     private void setTargetOffsetTop(int offset, boolean requiresUpdate) {
 //        mRefreshView.bringToFront();
+        //  listView 移动
         mTarget.offsetTopAndBottom(offset);
         mCurrentOffsetTop = mTarget.getTop();
         mRefreshDrawable.offsetTopAndBottom(offset);
@@ -501,5 +518,15 @@ public class PTRefreshLayout extends ViewGroup {
 
     public interface OnRefreshListener {
         void onRefresh();
+    }
+
+    private PullListener mPullListener;
+
+    public void setPullListener(PullListener pullListener) {
+        mPullListener = pullListener;
+    }
+
+    public interface PullListener {
+        void onPullChange(float percent);
     }
 }

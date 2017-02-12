@@ -13,6 +13,8 @@ import butterknife.Bind;
 import butterknife.ButterKnife;
 import czy.com.newrefreshlayout.R;
 import czy.com.newrefreshlayout.adapter.RecycleViewAdapter;
+import czy.com.newrefreshlayout.bus.BusProvider;
+import czy.com.newrefreshlayout.bus.event.RefreshLayoutPullEvent;
 import czy.com.newrefreshlayout.ptrrefreshlayout.PTRefreshLayout;
 
 /**
@@ -47,6 +49,13 @@ public class RecycleViewFragment extends Fragment {
                         mRefreshLayout.setRefreshing(false);
                     }
                 }, 3000);
+            }
+        });
+
+        mRefreshLayout.setPullListener(new PTRefreshLayout.PullListener() {
+            @Override
+            public void onPullChange(float percent) {
+                BusProvider.post(new RefreshLayoutPullEvent(percent));
             }
         });
 
